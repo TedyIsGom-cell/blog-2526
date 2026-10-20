@@ -2,7 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Think Storage',
+  title: '20년대식',
   description: '여러 사람이 함께 쓰고 읽는 글과 생각의 공간',
 };
 

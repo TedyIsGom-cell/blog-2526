@@ -45,7 +45,7 @@ export default async function Home() {
   return (
     <main className="max-w-4xl mx-auto px-6 py-16">
       <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
-        <h1 className="text-3xl font-bold">Think Storage</h1>
+        <h1 className="text-3xl font-bold">20년대식</h1>
         <div className="flex items-center flex-wrap gap-4">
           <DarkModeToggle />
           <Link href="/changelog" className="text-sm text-gray-400 hover:text-gray-700">
