@@ -2,8 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: '이산의 블로그',
-  description: '이산의 작품과 글을 담은 공간',
+  title: 'Think Storage',
+  description: '여러 사람이 함께 쓰고 읽는 글과 생각의 공간',
 };
 
 const themeScript = `

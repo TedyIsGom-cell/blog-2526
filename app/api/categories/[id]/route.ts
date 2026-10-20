@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { isValidSession, getSessionTokenFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/server-auth';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const token = getSessionTokenFromRequest(req);
-  if (!(await isValidSession(token))) {
-    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-  }
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: routeId } = await params;
+  const actor = await requireUser(req, ['ADMIN']);
+  if (actor instanceof Response) return actor;
 
   const { name: newName } = await req.json();
   if (!newName?.trim()) {
     return NextResponse.json({ error: '새 카테고리 이름을 입력해주세요.' }, { status: 400 });
   }
 
-  const id = Number(params.id);
+  const id = Number(routeId);
   const current = await prisma.category.findUnique({ where: { id } });
   if (!current) {
     return NextResponse.json({ error: '카테고리를 찾을 수 없습니다.' }, { status: 404 });
@@ -45,13 +44,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   return NextResponse.json(updated);
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-  const token = getSessionTokenFromRequest(req);
-  if (!(await isValidSession(token))) {
-    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
-  }
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: routeId } = await params;
+  const actor = await requireUser(req, ['ADMIN']);
+  if (actor instanceof Response) return actor;
 
-  const id = Number(params.id);
+  const id = Number(routeId);
   const current = await prisma.category.findUnique({
     where: { id },
     include: { children: true },
