@@ -4,7 +4,7 @@ import { hashPassword, safeEqual } from '@/lib/auth';
 import { validateBirthDate } from '@/lib/birthdays';
 import { authThrottleKey, checkSameOrigin, consumeAuthAttempt, createUserSession, userSelect } from '@/lib/server-auth';
 
-export async function POST(req: Request) {
+async function register(req: Request) {
   if (!checkSameOrigin(req)) return NextResponse.json({ error: '허용되지 않은 요청입니다.' }, { status: 403 });
   let body;
   try { body = await req.json(); } catch { return NextResponse.json({ error: '입력 형식을 확인해주세요.' }, { status: 400 }); }
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const passwordHash = await hashPassword(body.password);
   try {
     const user = await prisma.$transaction(async tx => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(842107)::text AS locked`;      const noAdmin = await tx.user.count({ where: { role: 'ADMIN' } }) === 0;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(842107)::text AS locked`;
       const noAdmin = await tx.user.count({ where: { role: 'ADMIN' } }) === 0;
       return tx.user.create({ data: { name, email, passwordHash, birthDate, role: wantsAdmin && validSetup && noAdmin ? 'ADMIN' : 'READER' }, select: userSelect });
     });
@@ -32,5 +32,14 @@ export async function POST(req: Request) {
   } catch (error) {
     if ((error as { code?: string }).code === 'P2002') return NextResponse.json({ error: '이미 가입된 이메일입니다.' }, { status: 409 });
     throw error;
+  }
+}
+
+export async function POST(req: Request) {
+  try { return await register(req); }
+  catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'UNKNOWN';
+    console.error('Registration failed', { code });
+    return NextResponse.json({ error: '가입 처리 중 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }, { status: 500 });
   }
 }
