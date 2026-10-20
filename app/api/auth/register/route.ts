@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const passwordHash = await hashPassword(body.password);
   try {
     const user = await prisma.$transaction(async tx => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(842107)`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(842107)::text AS locked`;      const noAdmin = await tx.user.count({ where: { role: 'ADMIN' } }) === 0;
       const noAdmin = await tx.user.count({ where: { role: 'ADMIN' } }) === 0;
       return tx.user.create({ data: { name, email, passwordHash, birthDate, role: wantsAdmin && validSetup && noAdmin ? 'ADMIN' : 'READER' }, select: userSelect });
     });
