@@ -11,8 +11,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: '입력 형식을 확인해주세요.' }, { status: 400 });
   if (!['READER', 'WRITER', 'ADMIN'].includes(body.role)) return NextResponse.json({ error: '올바른 직책을 선택해주세요.' }, { status: 400 });
   const result = await prisma.$transaction(async tx => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(842107)`;
-    const currentActor = await tx.user.findUnique({ where: { id: actor.id }, select: { role: true } });
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(842107)::text AS locked`;    const currentActor = await tx.user.findUnique({ where: { id: actor.id }, select: { role: true } });
     if (currentActor?.role !== 'ADMIN') return { error: '관리자 권한이 필요합니다.', status: 403 };
     const target = await tx.user.findUnique({ where: { id: userId }, select: { role: true } });
     if (!target) return { error: '회원을 찾을 수 없습니다.', status: 404 };
