@@ -82,15 +82,33 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
+  googleSubject String? @unique
+  googleEmail   String?
   birthDate    DateTime? @db.Date
   role         UserRole @default(READER)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   sessions     Session[]
+  googleAuthFlows GoogleAuthFlow[]
   posts        Post[]
   comments     Comment[]
   newsletterSubscription NewsletterSubscription?
   emailSubmissionCredential EmailSubmissionCredential?
+}
+
+model GoogleAuthFlow {
+  stateHash    String   @id
+  browserHash  String
+  codeVerifier String
+  nonce        String
+  mode         String
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionHash  String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([expiresAt])
 }
 
 model Session {

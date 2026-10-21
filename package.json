@@ -10,15 +10,17 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "db:generate": "prisma generate",
-    "db:upgrade": "prisma db execute --file prisma/upgrade-collaboration.sql --schema prisma/schema.prisma && npm run db:upgrade:birthday",
+    "db:upgrade": "prisma db execute --file prisma/upgrade-collaboration.sql --schema prisma/schema.prisma && npm run db:upgrade:birthday && npm run db:upgrade:google",
     "db:claim-legacy": "node --env-file=.env --import tsx scripts/claim-legacy-posts.ts",
     "db:init": "prisma db push",
     "db:cleanup": "node --env-file=.env --import tsx scripts/cleanup.ts",
-    "db:upgrade:birthday": "prisma db execute --file prisma/upgrade-birthday-age.sql --schema prisma/schema.prisma"
+    "db:upgrade:birthday": "prisma db execute --file prisma/upgrade-birthday-age.sql --schema prisma/schema.prisma",
+    "db:upgrade:google": "prisma db execute --file prisma/upgrade-google-login.sql --schema prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
     "@vercel/blob": "^0.27.1",
+    "jose": "^6.1.0",
     "next": "15.5.28",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -35,6 +37,6 @@
     "tsx": "^4.20.0"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=20.19.0"
   }
 }

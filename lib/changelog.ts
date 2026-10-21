@@ -6,6 +6,10 @@ export type ChangelogEntry = {
 export const changelog: ChangelogEntry[] = [
   {
     date: '2026-10-21',
+    description: '인스타용 이미지에 기본·레트로 초록·픽셀 농장 스타일 선택 추가. Google 가입·로그인 및 기존 계정에 Google 로그인 연결 기능 추가.',
+  },
+  {
+    date: '2026-10-21',
     description: '내 정보에서 기본·레트로 초록·픽셀 농장 UI 선택 및 브라우저별 저장. 회원·뉴스레터 원본에 테마를 통합하고 해·달 전환 버튼 제거.',
   },
   {

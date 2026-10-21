@@ -15,7 +15,9 @@ async function login(req: Request) {
   if (!email || email.length > 254 || typeof body.password !== 'string' || body.password.length > 256) return NextResponse.json({ error: '이메일과 비밀번호를 확인해주세요.' }, { status: 400 });
   if (!await consumeAuthAttempt(authThrottleKey(req, 'login-email', email)) || !await consumeAuthAttempt(authThrottleKey(req, 'login-ip'), 50)) return NextResponse.json({ error: '시도가 너무 많습니다. 15분 후 다시 시도해주세요.' }, { status: 429, headers: { 'Retry-After': '900' } });
   const user = await prisma.user.findUnique({ where: { email }, select: { ...userSelect, passwordHash: true } });
-  if (!await verifyPassword(body.password, user?.passwordHash || await dummyHash) || !user) return NextResponse.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, { status: 401 });
+  const passwordAccount = !!user && user.passwordHash.startsWith('scrypt$');
+  const passwordMatches = await verifyPassword(body.password, passwordAccount ? user!.passwordHash : await dummyHash);
+  if (!passwordAccount || !passwordMatches || !user) return NextResponse.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, { status: 401 });
   const { passwordHash: _, ...safeUser } = user;
   const res = NextResponse.json({ user: safeUser });
   await createUserSession(user.id, res);

@@ -7,6 +7,9 @@ import NewsletterPreferences from '@/app/components/NewsletterPreferences';
 import EmailSubmissionSettings from '@/app/components/EmailSubmissionSettings';
 import BirthdaySettings from '@/app/components/BirthdaySettings';
 import ThemeSettings from '@/app/components/ThemeSettings';
+import GoogleAccountSettings from '@/app/components/GoogleAccountSettings';
+import { prisma } from '@/lib/db';
+import { googleConfig } from '@/lib/google-oidc';
 
 export const dynamic = 'force-dynamic';
 const roleLabels: Record<UserRole, string> = { READER: '독자', WRITER: '집필자', ADMIN: '관리자' };
@@ -14,6 +17,7 @@ const roleLabels: Record<UserRole, string> = { READER: '독자', WRITER: '집필
 export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const google = await prisma.user.findUnique({ where: { id: user.id }, select: { googleSubject: true, googleEmail: true } });
   return <main className="max-w-4xl mx-auto px-6 py-16">
     <nav className="flex justify-between items-center gap-4"><Link href="/" className="text-sm text-gray-500 hover:underline">← 블로그로</Link><LogoutButton /></nav>
     <h1 className="text-2xl font-bold mt-6 mb-6">내 정보</h1>
@@ -22,6 +26,7 @@ export default async function AccountPage() {
       <p className="text-sm text-gray-500 mt-2 break-all">{user.email}</p>
       {canWrite(user) ? <div className="flex flex-wrap gap-4 mt-5 text-sm"><Link href="/admin/write" className="bg-black text-white rounded px-4 py-2">새 글 쓰기</Link><Link href="/admin/dashboard" className="border rounded px-4 py-2">{user.role === 'ADMIN' ? '관리 대시보드' : '내 글 관리'}</Link></div> : <p className="text-sm text-gray-500 mt-4">함께 글을 쓰려면 관리자에게 집필자 권한을 요청해주세요.</p>}
     </section>
+    <GoogleAccountSettings linked={!!google?.googleSubject} googleEmail={google?.googleEmail ?? null} configured={!!googleConfig()} />
     <div className="account-theme-settings border rounded-lg p-5 mb-8">
       <ThemeSettings />
     </div>
