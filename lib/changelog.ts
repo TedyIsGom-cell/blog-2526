@@ -6,7 +6,7 @@ export type ChangelogEntry = {
 export const changelog: ChangelogEntry[] = [
   {
     date: '2026-10-21',
-    description: '단체 블로그로 전환: 회원가입 시 선택 생일 등록, 내 계정에서 수정, 글·댓글 작성자의 생일을 기준으로 작성 당시 나이를 일수로 표시. 로그인 댓글을 회원 계정에 연결.',
+    description: '내 정보에 UI 설정 추가: 기본·레트로 초록·픽셀 농장 3가지 테마 선택 및 브라우저별 자동 저장. 해·달 전환 버튼을 내 정보 링크로 변경.',
   },
   {
     date: '2026-08-06',

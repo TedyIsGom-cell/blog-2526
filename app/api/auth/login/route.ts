@@ -1,28 +1,27 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { hashPassword, verifyPassword } from '@/lib/auth';
-import { authThrottleKey, checkSameOrigin, consumeAuthAttempt, createUserSession, revokeUserSession, userSelect } from '@/lib/server-auth';
+import { createSessionToken } from '@/lib/auth';
 
-// Same work factor is used for nonexistent accounts to reduce timing disclosure.
-const dummyHash = hashPassword('this-is-not-an-account-password');
 export async function POST(req: Request) {
-  if (!checkSameOrigin(req)) return NextResponse.json({ error: '허용되지 않은 요청입니다.' }, { status: 403 });
-  let body;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: '입력 형식을 확인해주세요.' }, { status: 400 }); }
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: '입력 형식을 확인해주세요.' }, { status: 400 });
-  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-  if (!email || email.length > 254 || typeof body.password !== 'string' || body.password.length > 256) return NextResponse.json({ error: '이메일과 비밀번호를 확인해주세요.' }, { status: 400 });
-  if (!await consumeAuthAttempt(authThrottleKey(req, 'login-email', email)) || !await consumeAuthAttempt(authThrottleKey(req, 'login-ip'), 50)) return NextResponse.json({ error: '시도가 너무 많습니다. 15분 후 다시 시도해주세요.' }, { status: 429, headers: { 'Retry-After': '900' } });
-  const user = await prisma.user.findUnique({ where: { email }, select: { ...userSelect, passwordHash: true } });
-  if (!await verifyPassword(body.password, user?.passwordHash || await dummyHash) || !user) return NextResponse.json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' }, { status: 401 });
-  const { passwordHash: _, ...safeUser } = user;
-  const res = NextResponse.json({ user: safeUser });
-  await createUserSession(user.id, res);
-  return res;
+  const { password } = await req.json();
+
+  if (password && password === process.env.ADMIN_PASSWORD) {
+    const token = await createSessionToken();
+    const res = NextResponse.json({ success: true });
+    res.cookies.set('admin_session', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7일 유지
+    });
+    return res;
+  }
+
+  return NextResponse.json({ success: false }, { status: 401 });
 }
-export async function DELETE(req: Request) {
-  if (!checkSameOrigin(req)) return NextResponse.json({ error: '허용되지 않은 요청입니다.' }, { status: 403 });
+
+export async function DELETE() {
   const res = NextResponse.json({ success: true });
-  await revokeUserSession(req, res);
+  res.cookies.delete('admin_session');
   return res;
 }

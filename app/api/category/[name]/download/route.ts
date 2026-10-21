@@ -1,17 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { formatDateWithAge } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ name: string }> }
+  { params }: { params: { name: string } }
 ) {
-  const category = decodeURIComponent((await params).name);
+  const category = decodeURIComponent(params.name);
 
   const posts = await prisma.post.findMany({
     where: { published: true, category },
     orderBy: { createdAt: 'asc' },
-    include: { author: { select: { name: true, birthDate: true } } },
   });
 
   if (posts.length === 0) {
@@ -22,7 +21,7 @@ export async function GET(
 
   const text = posts
     .map((post) => {
-      return `${post.title}\n글쓴이: ${post.author?.name || '기존 글'}\n${formatDateWithAge(post.createdAt, post.author?.birthDate)}\n\n${post.content}`;
+      return `${post.title}\n(${formatDateTime(post.createdAt)})\n\n${post.content}`;
     })
     .join(divider);
 

@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireUser } from '@/lib/server-auth';
+import { isValidSession, getSessionTokenFromRequest } from '@/lib/auth';
 
 export async function GET() {
   const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
   const counts = await prisma.post.groupBy({
     by: ['category'],
-    where: { published: true },
     _count: { category: true },
   });
   const countMap = new Map(counts.map((c) => [c.category, c._count.category]));
@@ -22,8 +21,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const actor = await requireUser(req, ['ADMIN']);
-  if (actor instanceof Response) return actor;
+  const token = getSessionTokenFromRequest(req);
+  if (!(await isValidSession(token))) {
+    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+  }
 
   const { name, parentId } = await req.json();
   if (!name?.trim()) {

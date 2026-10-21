@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { formatDateAndAgeDays } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 
 type Notification = {
   id: number;
   author: string;
   content: string;
   createdAt: string;
-  ageDays: number | null;
   postId: number;
   postTitle: string;
 };
@@ -87,7 +86,7 @@ export default function NotificationBell() {
               <p className="text-xs text-gray-400 mb-1 line-clamp-1">{n.postTitle}</p>
               <p className="text-sm font-medium">{n.author}</p>
               <p className="text-sm text-gray-600 line-clamp-2 mt-0.5">{n.content}</p>
-              <p className="text-xs text-gray-400 mt-1">{formatDateAndAgeDays(n.createdAt, n.ageDays)}</p>
+              <p className="text-xs text-gray-400 mt-1">{formatDateTime(n.createdAt)}</p>
             </Link>
           ))}
         </div>

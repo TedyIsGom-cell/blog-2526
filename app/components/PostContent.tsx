@@ -1,5 +1,4 @@
 import React from 'react';
-import { safeContentUrl } from '@/lib/content-urls';
 
 // 글 내용을 한 줄씩 살펴보면서
 // - ![](이미지주소) 형태의 줄은 사진으로
@@ -36,12 +35,10 @@ function renderInline(text: string): React.ReactNode[] {
       );
     }
     if ((m = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/))) {
-      const href = safeContentUrl(m[2]);
-      if (!href) return <React.Fragment key={i}>{m[1]}</React.Fragment>;
       return (
         <a
           key={i}
-          href={href}
+          href={m[2]}
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-600 dark:text-blue-400 underline"
@@ -128,13 +125,13 @@ export default function PostContent({ content }: { content: string }) {
     const quoteMatch = trimmed.match(QUOTE_LINE);
     const listMatch = trimmed.match(LIST_LINE);
 
-    if (imgMatch && safeContentUrl(imgMatch[2], true)) {
+    if (imgMatch) {
       flushAll();
       blocks.push(
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={blocks.length}
-          src={safeContentUrl(imgMatch[2], true)!}
+          src={imgMatch[2]}
           alt={imgMatch[1]}
           className="w-full rounded-lg mb-6"
         />

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 export default function WritePost() {
   const [title, setTitle] = useState('');
@@ -17,9 +16,8 @@ export default function WritePost() {
 
   useEffect(() => {
     fetch('/api/categories')
-      .then((response) => response.ok ? response.json() : [])
-      .then((categories) => setCategoryOptions(Array.isArray(categories) ? categories.map((category: { name: string }) => category.name) : []))
-      .catch(() => setCategoryOptions([]));
+      .then((res) => res.json())
+      .then((cats) => setCategoryOptions(cats.map((c: { name: string }) => c.name)));
   }, []);
 
   function insertAtCursor(text: string) {
@@ -48,13 +46,16 @@ export default function WritePost() {
     const formData = new FormData();
     formData.append('file', file);
 
-    try {
-      const response = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || '사진 업로드에 실패했습니다.');
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    setUploading(false);
+    e.target.value = '';
+
+    if (res.ok) {
+      const data = await res.json();
       insertAtCursor(`\n![](${data.url})\n`);
-    } catch (error) { setError(error instanceof Error ? error.message : '사진 업로드에 실패했습니다.'); }
-    finally { setUploading(false); e.target.value = ''; }
+    } else {
+      setError('사진 업로드에 실패했습니다.');
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -62,38 +63,33 @@ export default function WritePost() {
     setError('');
     setSaving(true);
 
-    try {
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content, category }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || '저장에 실패했습니다. 다시 시도해주세요.');
-      router.push('/admin/dashboard');
-      router.refresh();
-    } catch (error) { setError(error instanceof Error ? error.message : '연결을 확인하고 다시 시도해주세요.'); }
-    finally { setSaving(false); }
+    const res = await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content, category }),
+    });
+
+    setSaving(false);
+
+    if (res.ok) {
+      router.push('/');
+    } else {
+      setError('저장에 실패했습니다. 다시 시도해주세요.');
+    }
   }
 
   return (
     <main className="max-w-2xl mx-auto px-6 py-16">
-      <Link href="/admin/dashboard" className="block text-sm text-gray-500 mb-6 hover:underline">← 글 관리로</Link>
       <h1 className="text-2xl font-bold mb-6">새 글 쓰기</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="제목"
-          aria-label="제목"
-          required
-          maxLength={300}
           className="w-full border rounded px-3 py-2 text-lg"
         />
         <input
           value={category}
-          aria-label="카테고리"
-          maxLength={100}
           onChange={(e) => setCategory(e.target.value)}
           placeholder="카테고리 (예: 에세이, 소설 / 비워두면 '일반')"
           className="w-full border rounded px-3 py-2 text-sm"
@@ -112,7 +108,7 @@ export default function WritePost() {
               type="file"
               accept="image/*"
               onChange={handleImageSelect}
-              disabled={uploading || saving}
+              disabled={uploading}
               className="hidden"
             />
           </label>
@@ -123,9 +119,6 @@ export default function WritePost() {
 
         <textarea
           ref={textareaRef}
-          aria-label="본문"
-          maxLength={200000}
-          required
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={`내용을 입력하세요...\n\n유튜브 넣기: 유튜브 링크를 한 줄에 단독으로 입력하면 자동으로 삽입돼요.`}
@@ -139,10 +132,10 @@ export default function WritePost() {
           <code className="bg-gray-100 px-1 rounded">[링크](주소)</code> 문법을 쓸 수 있어요.
           유튜브는 링크를 한 줄에 단독으로 넣으면 자동 삽입돼요.
         </p>
-        {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
+        {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
           type="submit"
-          disabled={saving || uploading}
+          disabled={saving}
           className="bg-black text-white rounded px-6 py-2 disabled:opacity-50"
         >
           {saving ? '저장 중...' : '발행하기'}

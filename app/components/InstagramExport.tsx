@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { formatDateAndAgeDays } from '@/lib/format';
 
 const WIDTH = 1080;
 const MARGIN = 190;
@@ -131,11 +130,9 @@ function drawCover(
   const TITLE_LINE_H = 76;
   const GAP_2 = 60;
   const DATE_H = 40;
-  ctx.font = `30px ${FONT_FAMILY}`;
-  const dateLines = wrapText(ctx, dateLabel, MAX_WIDTH);
 
   const titleBlockHeight = titleLines.length * TITLE_LINE_H;
-  const totalHeight = CATEGORY_H + GAP_1 + titleBlockHeight + GAP_2 + DATE_H * dateLines.length;
+  const totalHeight = CATEGORY_H + GAP_1 + titleBlockHeight + GAP_2 + DATE_H;
 
   // 어떤 비율로 잘려도 안전하도록, 전체 내용을 캔버스 정중앙에 배치합니다.
   let y = Math.max(MARGIN, (height - totalHeight) / 2);
@@ -156,10 +153,8 @@ function drawCover(
 
   ctx.fillStyle = '#9ca3af';
   ctx.font = `30px ${FONT_FAMILY}`;
-  dateLines.forEach(line => {
-    y += DATE_H;
-    ctx.fillText(line, MARGIN, y);
-  });
+  y += DATE_H;
+  ctx.fillText(dateLabel, MARGIN, y);
 }
 
 function drawTextPage(
@@ -212,15 +207,11 @@ export default function InstagramExport({
   category,
   createdAt,
   content,
-  authorName,
-  ageDays,
 }: {
   title: string;
   category: string;
   createdAt: string;
   content: string;
-  authorName: string;
-  ageDays: number | null;
 }) {
   const [format, setFormat] = useState<Format>('square');
   const [slides, setSlides] = useState<string[]>([]);
@@ -239,7 +230,7 @@ export default function InstagramExport({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dateLabel = `${authorName} · ${formatDateAndAgeDays(createdAt, ageDays)}`;
+    const dateLabel = new Date(createdAt).toLocaleDateString('ko-KR');
     const results: string[] = [];
     let imageLoadFailed = false;
 

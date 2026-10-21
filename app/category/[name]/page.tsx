@@ -1,20 +1,20 @@
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
-import { formatDateWithAge } from '@/lib/format';
+import { formatDateTime, daysSinceBase } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CategoryPage({
   params,
 }: {
-  params: Promise<{ name: string }>;
+  params: { name: string };
 }) {
-  const category = decodeURIComponent((await params).name);
+  const category = decodeURIComponent(params.name);
 
   const posts = await prisma.post.findMany({
     where: { published: true, category },
     orderBy: { createdAt: 'desc' },
-    include: { author: { select: { name: true, birthDate: true } }, _count: { select: { comments: true } } },
+    include: { _count: { select: { comments: true } } },
   });
 
   return (
@@ -41,7 +41,8 @@ export default async function CategoryPage({
               {post.title}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              {post.author?.name || '기존 글'} · {formatDateWithAge(post.createdAt, post.author?.birthDate)}{' '}
+              {formatDateTime(post.createdAt)}{' '}
+              <span className="text-gray-400">({daysSinceBase(post.createdAt)}일)</span>
               {' · '}댓글 {post._count.comments}
             </p>
           </Link>

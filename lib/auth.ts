@@ -1,30 +1,46 @@
-import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+// Edge Runtime(미들웨어)에서도 동작해야 해서 Node.js의 'crypto' 모듈 대신
+// 표준 Web Crypto API(crypto.subtle)를 사용합니다.
 
-export const SESSION_COOKIE = 'blog_session';
-export const SESSION_SECONDS = 60 * 60 * 24 * 7;
-export function randomToken(): string { return randomBytes(32).toString('hex'); }
-export function sessionTokenHash(token: string): string { return createHash('sha256').update(token).digest('hex'); }
+const SECRET = process.env.ADMIN_SECRET || 'please-change-this-secret';
 
-function derive(password: string, salt: string): Promise<Buffer> {
-  return new Promise((resolve, reject) => scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 }, (err, key) => err ? reject(err) : resolve(key)));
+function toHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16).toString('hex');
-  return `scrypt$${salt}$${(await derive(password, salt)).toString('hex')}`;
+
+async function hmacSha256(message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
+  return toHex(signature);
 }
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  const [algorithm, salt, encoded] = stored.split('$');
-  if (algorithm !== 'scrypt' || !/^[a-f0-9]{32}$/.test(salt || '') || !/^[a-f0-9]{128}$/.test(encoded || '')) return false;
-  const actual = await derive(password, salt);
-  return timingSafeEqual(actual, Buffer.from(encoded, 'hex'));
+
+export async function createSessionToken(): Promise<string> {
+  return hmacSha256('admin-session');
 }
-export function safeEqual(a: string, b: string): boolean {
-  const left = createHash('sha256').update(a).digest();
-  const right = createHash('sha256').update(b).digest();
-  return timingSafeEqual(left, right);
+
+export async function isValidSession(token: string | undefined | null): Promise<boolean> {
+  if (!token) return false;
+  const expected = await createSessionToken();
+  return token === expected;
 }
-// Existing guest comments retain their current hash format.
-export async function hashCommentPassword(password: string): Promise<string> { return sessionTokenHash(password); }
+
+// 게스트 댓글 비밀번호는 원문을 저장하지 않고 해시로 저장합니다.
+export async function hashCommentPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(password));
+  return toHex(digest);
+}
+
 export function getSessionTokenFromRequest(req: Request): string | undefined {
-  return req.headers.get('cookie')?.split(';').map(x => x.trim()).find(x => x.startsWith(`${SESSION_COOKIE}=`))?.slice(SESSION_COOKIE.length + 1);
+  const cookie = req.headers.get('cookie') || '';
+  const match = cookie.match(/admin_session=([^;]+)/);
+  return match ? match[1] : undefined;
 }

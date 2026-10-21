@@ -1,14 +1,13 @@
 'use client';
 
-import { use, useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
-import { formatDateAndAgeDays } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 
-type Post = { id: number; title: string; slug: string; createdAt: string; author: string; ageDays: number | null };
+type Post = { id: number; title: string; slug: string; createdAt: string };
 type Category = { id: number; name: string; parentId: number | null };
 
-export default function CategoryDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function CategoryDetail({ params }: { params: { id: string } }) {
   const [categoryName, setCategoryName] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
@@ -22,7 +21,7 @@ export default function CategoryDetail({ params }: { params: Promise<{ id: strin
 
   async function load() {
     const [postsRes, catsRes] = await Promise.all([
-      fetch(`/api/categories/${id}/posts`),
+      fetch(`/api/categories/${params.id}/posts`),
       fetch('/api/categories'),
     ]);
     if (postsRes.ok) {
@@ -38,7 +37,7 @@ export default function CategoryDetail({ params }: { params: Promise<{ id: strin
 
   useEffect(() => {
     load();
-  }, [id]);
+  }, [params.id]);
 
   function toggle(id: number) {
     setSelected((prev) => {
@@ -89,7 +88,7 @@ export default function CategoryDetail({ params }: { params: Promise<{ id: strin
     const res = await fetch('/api/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: subName.trim(), parentId: Number(id) }),
+      body: JSON.stringify({ name: subName.trim(), parentId: Number(params.id) }),
     });
 
     if (res.ok) {
@@ -101,8 +100,8 @@ export default function CategoryDetail({ params }: { params: Promise<{ id: strin
     }
   }
 
-  const otherCategories = allCategories.filter((c) => c.id !== Number(id));
-  const subCategories = allCategories.filter((c) => c.parentId === Number(id));
+  const otherCategories = allCategories.filter((c) => c.id !== Number(params.id));
+  const subCategories = allCategories.filter((c) => c.parentId === Number(params.id));
 
   if (loading) {
     return (
@@ -174,7 +173,7 @@ export default function CategoryDetail({ params }: { params: Promise<{ id: strin
             />
             <div className="flex-1">
               <p className="text-sm font-medium">{post.title}</p>
-              <p className="text-xs text-gray-400">{post.author} · {formatDateAndAgeDays(post.createdAt, post.ageDays)}</p>
+              <p className="text-xs text-gray-400">{formatDateTime(post.createdAt)}</p>
             </div>
           </label>
         ))}

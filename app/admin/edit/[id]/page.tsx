@@ -1,13 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-export default function EditPost() {
-  const { id } = useParams<{ id: string }>();
-  const [admin, setAdmin] = useState(false);
-  const [loadError, setLoadError] = useState('');
+export default function EditPost({ params }: { params: { id: string } }) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -21,35 +17,20 @@ export default function EditPost() {
 
   useEffect(() => {
     fetch('/api/categories')
-      .then((response) => response.ok ? response.json() : [])
-      .then((categories) => setCategoryOptions(Array.isArray(categories) ? categories.map((category: { name: string }) => category.name) : []))
-      .catch(() => setCategoryOptions([]));
+      .then((res) => res.json())
+      .then((cats) => setCategoryOptions(cats.map((c: { name: string }) => c.name)));
   }, []);
 
   useEffect(() => {
-    let active = true;
-    async function loadPost() {
-      setLoading(true);
-      setAdmin(false);
-      setLoadError('');
-      try {
-        const [response, meResponse] = await Promise.all([fetch(`/api/posts/${id}`, { cache: 'no-store' }), fetch('/api/auth/me', { cache: 'no-store' })]);
-        const post = await response.json();
-        if (!response.ok) throw new Error(post.error || '글을 불러올 수 없습니다.');
-        const me = meResponse.ok ? await meResponse.json() : null;
-        if (!me?.user) throw new Error('로그인 상태를 확인할 수 없습니다. 다시 로그인해주세요.');
-        if (!active) return;
-        setTitle(post.title);
-        setCategory(post.category);
-        setContent(post.content);
-        setAdmin(me?.user?.role === 'ADMIN');
-      } catch (error) {
-        if (active) setLoadError(error instanceof Error ? error.message : '연결을 확인하고 다시 시도해주세요.');
-      } finally { if (active) setLoading(false); }
-    }
-    void loadPost();
-    return () => { active = false; };
-  }, [id]);
+    fetch(`/api/posts/${params.id}`)
+      .then((res) => res.json())
+      .then((post) => {
+        setTitle(post.title || '');
+        setCategory(post.category || '');
+        setContent(post.content || '');
+        setLoading(false);
+      });
+  }, [params.id]);
 
   function insertAtCursor(text: string) {
     const textarea = textareaRef.current;
@@ -76,13 +57,16 @@ export default function EditPost() {
     const formData = new FormData();
     formData.append('file', file);
 
-    try {
-      const response = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || '사진 업로드에 실패했습니다.');
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    setUploading(false);
+    e.target.value = '';
+
+    if (res.ok) {
+      const data = await res.json();
       insertAtCursor(`\n![](${data.url})\n`);
-    } catch (error) { setError(error instanceof Error ? error.message : '사진 업로드에 실패했습니다.'); }
-    finally { setUploading(false); e.target.value = ''; }
+    } else {
+      setError('사진 업로드에 실패했습니다.');
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -90,32 +74,27 @@ export default function EditPost() {
     setError('');
     setSaving(true);
 
-    try {
-      const response = await fetch(`/api/posts/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content, category }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || '저장에 실패했습니다. 다시 시도해주세요.');
-      router.push(`/posts/${id}`);
-      router.refresh();
-    } catch (error) { setError(error instanceof Error ? error.message : '연결을 확인하고 다시 시도해주세요.'); }
-    finally { setSaving(false); }
+    const res = await fetch(`/api/posts/${params.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content, category }),
+    });
+
+    setSaving(false);
+
+    if (res.ok) {
+      router.push(`/posts/${params.id}`);
+    } else {
+      setError('저장에 실패했습니다. 다시 시도해주세요.');
+    }
   }
 
   async function handleDelete() {
-    if (!admin || !confirm('이 글을 삭제할까요? 되돌릴 수 없습니다.')) return;
-    setSaving(true);
-    setError('');
-    try {
-      const response = await fetch(`/api/posts/${id}`, { method: 'DELETE' });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || '삭제에 실패했습니다.');
-      router.push('/admin/dashboard');
-      router.refresh();
-    } catch (error) { setError(error instanceof Error ? error.message : '연결을 확인해주세요.'); }
-    finally { setSaving(false); }
+    if (!confirm('이 글을 삭제할까요? 되돌릴 수 없습니다.')) return;
+    const res = await fetch(`/api/posts/${params.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      router.push('/');
+    }
   }
 
   if (loading) {
@@ -126,26 +105,18 @@ export default function EditPost() {
     );
   }
 
-  if (loadError) return <main className="max-w-2xl mx-auto px-6 py-16"><Link href="/admin/dashboard" className="text-sm underline">← 글 관리로</Link><p role="alert" className="text-red-600 mt-6">{loadError}</p><button onClick={() => window.location.reload()} className="text-sm underline mt-4">다시 불러오기</button></main>;
-
   return (
     <main className="max-w-2xl mx-auto px-6 py-16">
-      <Link href="/admin/dashboard" className="block text-sm text-gray-500 mb-6 hover:underline">← 글 관리로</Link>
       <h1 className="text-2xl font-bold mb-6">글 수정</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="제목"
-          aria-label="제목"
-          required
-          maxLength={300}
           className="w-full border rounded px-3 py-2 text-lg"
         />
         <input
           value={category}
-          aria-label="카테고리"
-          maxLength={100}
           onChange={(e) => setCategory(e.target.value)}
           placeholder="카테고리"
           className="w-full border rounded px-3 py-2 text-sm"
@@ -164,7 +135,7 @@ export default function EditPost() {
               type="file"
               accept="image/*"
               onChange={handleImageSelect}
-              disabled={uploading || saving}
+              disabled={uploading}
               className="hidden"
             />
           </label>
@@ -175,9 +146,6 @@ export default function EditPost() {
 
         <textarea
           ref={textareaRef}
-          aria-label="본문"
-          maxLength={200000}
-          required
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="내용을 입력하세요..."
@@ -191,23 +159,22 @@ export default function EditPost() {
           <code className="bg-gray-100 px-1 rounded">[링크](주소)</code> 문법을 쓸 수 있어요.
           유튜브는 링크를 한 줄에 단독으로 넣으면 자동 삽입돼요.
         </p>
-        {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
+        {error && <p className="text-red-500 text-sm">{error}</p>}
         <div className="flex items-center justify-between">
           <button
             type="submit"
-            disabled={saving || uploading}
+            disabled={saving}
             className="bg-black text-white rounded px-6 py-2 disabled:opacity-50"
           >
             {saving ? '저장 중...' : '수정 완료'}
           </button>
-          {admin && <button
+          <button
             type="button"
             onClick={handleDelete}
-            disabled={saving || uploading}
             className="text-sm text-red-500 hover:text-red-700"
           >
             이 글 삭제하기
-          </button>}
+          </button>
         </div>
       </form>
     </main>

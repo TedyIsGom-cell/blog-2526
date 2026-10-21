@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/db';
-import { formatDateWithAge } from '@/lib/format';
 import Link from 'next/link';
 import SearchBox from '../components/SearchBox';
 
@@ -8,9 +7,9 @@ export const dynamic = 'force-dynamic';
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: { q?: string };
 }) {
-  const q = (await searchParams).q?.trim() || '';
+  const q = searchParams.q?.trim() || '';
 
   const posts = q
     ? await prisma.post.findMany({
@@ -22,7 +21,7 @@ export default async function SearchPage({
           ],
         },
         orderBy: { createdAt: 'desc' },
-        include: { author: { select: { name: true, birthDate: true } }, _count: { select: { comments: true } } },
+        include: { _count: { select: { comments: true } } },
       })
     : [];
 
@@ -49,7 +48,7 @@ export default async function SearchPage({
             <p className="text-sm text-gray-500 mt-1 line-clamp-2">
               {post.content}
             </p>
-            <p className="text-xs text-gray-400 mt-1">{post.author?.name || '기존 글'} · {formatDateWithAge(post.createdAt, post.author?.birthDate)} · 댓글 {post._count.comments}</p>
+            <p className="text-xs text-gray-400 mt-1">댓글 {post._count.comments}</p>
           </Link>
         ))}
         {q && posts.length === 0 && (

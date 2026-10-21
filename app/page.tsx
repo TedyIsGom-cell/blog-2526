@@ -1,11 +1,12 @@
 import { Fragment } from 'react';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
-import { getCurrentUser, isAdmin, canWrite } from '@/lib/server-auth';
-import { formatDateWithAge } from '@/lib/format';
+import { cookies } from 'next/headers';
+import { isValidSession } from '@/lib/auth';
+import { formatDateTime, daysSinceBase } from '@/lib/format';
 import LogoutButton from './components/LogoutButton';
 import NotificationBell from './components/NotificationBell';
-import DarkModeToggle from './components/DarkModeToggle';
+import MyInfoLink from './components/MyInfoLink';
 import SearchBox from './components/SearchBox';
 
 export const dynamic = 'force-dynamic';
@@ -15,13 +16,12 @@ export default async function Home() {
     prisma.post.findMany({
       where: { published: true },
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { comments: true } }, author: { select: { name: true, birthDate: true } } },
+      include: { _count: { select: { comments: true } } },
     }),
     prisma.post.findMany({
       where: { published: true },
       orderBy: { viewCount: 'desc' },
       take: 3,
-      include: { author: { select: { name: true, birthDate: true } } },
     }),
     prisma.category.findMany({ orderBy: { name: 'asc' } }),
     prisma.post.groupBy({
@@ -40,38 +40,43 @@ export default async function Home() {
 
   const countMap = new Map(categoryCounts.map((c) => [c.category, c._count.category]));
 
-  const user = await getCurrentUser();
+  const sessionToken = cookies().get('admin_session')?.value;
+  const isAdmin = await isValidSession(sessionToken);
 
   return (
-    <main className="max-w-4xl mx-auto px-6 py-16">
-      <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
-        <h1 className="text-3xl font-bold">20년대식</h1>
-        <div className="flex items-center flex-wrap gap-4">
-          <DarkModeToggle />
+    <main className="home-main max-w-4xl mx-auto px-6 py-16">
+      <div className="site-header flex items-center justify-between mb-8">
+        <h1 className="site-title text-3xl font-bold">이산의 블로그</h1>
+        <nav aria-label="블로그 메뉴" className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <MyInfoLink />
           <Link href="/changelog" className="text-sm text-gray-400 hover:text-gray-700">
             업데이트 기록
           </Link>
-          {user ? (
+          {isAdmin ? (
             <>
-              {isAdmin(user) && <NotificationBell />}
-              <Link href="/account" className="text-sm text-gray-500 hover:underline">내 계정</Link>
-              {canWrite(user) && <><Link href="/admin/dashboard" className="text-sm text-gray-500 hover:underline">{isAdmin(user) ? '관리' : '내 글'}</Link><Link href="/admin/write" className="text-sm text-gray-500 hover:underline">글쓰기</Link></>}
+              <NotificationBell />
+              <Link href="/admin/dashboard" className="text-sm text-gray-400 hover:text-gray-700">
+                관리자
+              </Link>
+              <Link href="/admin/write" className="text-sm text-gray-400 hover:text-gray-700">
+                글쓰기
+              </Link>
               <LogoutButton />
             </>
           ) : (
-            <><Link href="/login" className="text-sm text-gray-500 hover:underline">로그인</Link><Link href="/register" className="text-sm text-gray-500 hover:underline">회원가입</Link></>
+            <Link href="/admin" className="text-sm text-gray-400 hover:text-gray-700">
+              관리자
+            </Link>
           )}
-        </div>
+        </nav>
       </div>
-
-      <p className="text-sm text-gray-500 mb-6">함께 쓰고 읽는 공간. <Link href={user ? '/account' : '/register'} className="underline">새 글을 뉴스레터로 받아보세요.</Link></p>
 
       <div className="mb-10">
         <SearchBox />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-6 md:gap-10">
-        <aside>
+        <aside className="category-sidebar">
           <h2 className="text-sm font-semibold text-gray-400 mb-3">카테고리</h2>
           <ul className="space-y-2 text-sm">
             <li>
@@ -117,30 +122,27 @@ export default async function Home() {
                   <Link
                     key={post.id}
                     href={`/posts/${post.id}`}
-                    className="border rounded-lg p-3 hover:border-gray-400 transition"
+                    className="popular-card border rounded-lg p-3 hover:border-gray-400 transition"
                   >
                     <span className="text-xs text-gray-400">#{i + 1}</span>
                     <p className="text-sm font-medium mt-1 line-clamp-2">{post.title}</p>
-                    <p className="text-xs text-gray-500 mt-2">{post.author?.name || '기존 글'}</p>
-                    <p className="text-xs text-gray-400 mt-1">{formatDateWithAge(post.createdAt, post.author?.birthDate)}</p>
-                    <p className="text-xs text-gray-400 mt-1">조회 {post.viewCount}</p>
+                    <p className="text-xs text-gray-400 mt-2">조회 {post.viewCount}</p>
                   </Link>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="space-y-8">
+          <div className="post-list space-y-8">
             {posts.map((post) => (
-              <Link key={post.id} href={`/posts/${post.id}`} className="block group">
+              <Link key={post.id} href={`/posts/${post.id}`} className="post-list-item block group">
                 <p className="text-xs text-gray-400">{post.category}</p>
                 <h2 className="text-xl font-semibold group-hover:underline">
                   {post.title}
                 </h2>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 mt-1">
-                  <span>{post.author?.name || '기존 글'}</span>
-                  <span>·</span>
-                  <span>{formatDateWithAge(post.createdAt, post.author?.birthDate)}</span>
+                  <span>{formatDateTime(post.createdAt)}</span>
+                  <span className="text-gray-400">({daysSinceBase(post.createdAt)}일)</span>
                   <span>·</span>
                   <span>조회 {post.viewCount}</span>
                   <span>·</span>
@@ -151,7 +153,7 @@ export default async function Home() {
               </Link>
             ))}
             {posts.length === 0 && (
-              <p className="text-gray-500">아직 발행된 글이 없습니다.</p>
+              <p className="text-gray-500">아직 글이 없습니다. 관리자 페이지에서 첫 글을 써보세요.</p>
             )}
           </div>
         </div>

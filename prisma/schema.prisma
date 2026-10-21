@@ -33,13 +33,7 @@ model Post {
   likeCount Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  authorId  String?
-  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  emailSubmission EmailSubmission?
   comments  Comment[]
-
-  @@index([authorId, createdAt])
-  @@index([published, createdAt])
 }
 
 model Comment {
@@ -50,135 +44,9 @@ model Comment {
   parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies   Comment[] @relation("CommentReplies")
   author    String
-  userId    String?
-  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   password  String
   content   String
   likeCount Int       @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-
-  @@index([userId])
-}
-
-
-enum UserRole {
-  READER
-  WRITER
-  ADMIN
-}
-
-enum DeliveryStatus {
-  PENDING
-  SENDING
-  SENT
-  FAILED
-  UNKNOWN
-  SKIPPED
-}
-
-model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  birthDate    DateTime? @db.Date
-  role         UserRole @default(READER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  sessions     Session[]
-  posts        Post[]
-  comments     Comment[]
-  newsletterSubscription NewsletterSubscription?
-  emailSubmissionCredential EmailSubmissionCredential?
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-model AuthRateLimit {
-  key      String   @id
-  attempts Int      @default(0)
-  resetAt  DateTime
-}
-
-model NewsletterSubscription {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enabled          Boolean  @default(true)
-  unsubscribeToken String   @unique @default(cuid())
-  confirmedAt DateTime?
-  confirmationTokenHash String? @unique
-  confirmationExpiresAt DateTime?
-  confirmationSentAt DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  deliveries       NewsletterDelivery[]
-}
-
-model NewsletterIssue {
-  id         String   @id @default(cuid())
-  key        String   @unique
-  title      String
-  html       String
-  text       String
-  postIds    Json
-  createdAt  DateTime @default(now())
-  deliveries NewsletterDelivery[]
-}
-
-model NewsletterDelivery {
-  id             String   @id @default(cuid())
-  issueId        String
-  issue          NewsletterIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  subscriptionId String
-  subscription   NewsletterSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  status         DeliveryStatus @default(PENDING)
-  payload        Json
-  providerId     String?
-  error          String?
-  attempts       Int      @default(0)
-  firstAttemptAt DateTime?
-  lastAttemptAt  DateTime?
-  sentAt         DateTime?
-  @@unique([issueId, subscriptionId])
-  @@index([status])
-}
-
-model NewsletterJobLock {
-  id        String   @id
-  token     String
-  expiresAt DateTime
-}
-
-model EmailSubmissionCredential {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
-  tokenHint String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model EmailSubmission {
-  id                String   @id @default(cuid())
-  providerMessageId String   @unique
-  postId            Int?     @unique
-  post              Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
-  sender            String
-  status            String   @default("PROCESSING")
-  error             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  @@index([sender, createdAt])
 }
