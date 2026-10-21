@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
+import { readAuthResponse } from '@/lib/auth-response';
 import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
@@ -26,7 +27,7 @@ export default function RegisterPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, ...(birthDate ? { birthDate } : {}), ...(setupToken ? { setupToken } : {}) }),
       });
-      const data = await response.json();
+      const data = await readAuthResponse(response, '회원가입에 실패했습니다.');
       if (!response.ok) throw new Error(data.error || '회원가입에 실패했습니다.');
       router.push('/account');
       router.refresh();

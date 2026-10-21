@@ -99,7 +99,7 @@ html[data-theme] :is(.bg-gray-50, .bg-gray-100) { background-color: var(--surfac
 html[data-theme] :is(.text-gray-900, .text-gray-800) { color: var(--ink); }
 html[data-theme] :is(.text-gray-700, .text-gray-600) { color: var(--ink-secondary); }
 html[data-theme] :is(.text-gray-500, .text-gray-400) { color: var(--muted); }
-html[data-theme] :is(.border, .border-b, .border-t, .border-l-2, .border-l-4,
+html[data-theme] :is(.border, .border-b, .border-t, .border-l-2, .border-l-4, .divide-y > *,
   .border-gray-100, .border-gray-200, .border-gray-300, .border-gray-400) { border-color: var(--line); }
 html[data-theme] :is(.hover\:bg-gray-50, .hover\:bg-gray-100):hover { background-color: var(--surface-hover); }
 html[data-theme] :is(.hover\:text-gray-600, .hover\:text-gray-700, .hover\:text-gray-800):hover { color: var(--ink); }
@@ -112,6 +112,10 @@ html[data-theme] .bg-red-50 { background-color: var(--danger-soft); }
 html[data-theme] .border-red-200 { border-color: var(--danger); }
 html[data-theme] .bg-red-500 { background-color: var(--danger); color: var(--page); }
 html[data-theme] .text-amber-600 { color: var(--muted); }
+html[data-theme='terminal'] :is(.text-green-700, .text-amber-700, .text-amber-900) { color: var(--ink-secondary); }
+html[data-theme='terminal'] .bg-amber-50 { background-color: var(--surface-soft); }
+html[data-theme='farm'] :is(.text-green-700, .text-amber-700) { color: var(--link); }
+html[data-theme='farm'] .bg-amber-50 { background-color: var(--surface-soft); }
 html[data-theme] :is(.shadow-sm, .shadow-lg) { box-shadow: var(--panel-shadow); }
 html[data-theme] .focus\:ring-gray-200:focus { --tw-ring-color: var(--line); }
 

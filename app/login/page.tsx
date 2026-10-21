@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
+import { readAuthResponse } from '@/lib/auth-response';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -20,7 +21,7 @@ export default function LoginPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await response.json();
+      const data = await readAuthResponse(response, '로그인에 실패했습니다.');
       if (!response.ok) throw new Error(data.error || '로그인에 실패했습니다.');
       router.push('/account');
       router.refresh();

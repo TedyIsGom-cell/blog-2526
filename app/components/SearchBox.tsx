@@ -14,7 +14,7 @@ export default function SearchBox({ initialQuery = '' }: { initialQuery?: string
   const [activeIndex, setActiveIndex] = useState(-1);
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
